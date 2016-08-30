@@ -7,9 +7,6 @@ git clone https://github.com/russelljjarvis/traub_LFPy.git
 cd traub_LFPy
 and run test0.py
 
-Then try
-$mpiexec -np 4 ipython -i example_mpi.py
-
 # traub_LFPy
 There are two approaches to recording the LFP in Traub. The first approach is to use LFPy. The second approach is to use the mod files: .xtra.mod and extracellular.mod, and to construct a grid of point processors corresponding to recording electrodes. The HOC/MOD way is usually more complex/tedious and less portable/reproducible so the LFPy way is probably more warranted.
 
