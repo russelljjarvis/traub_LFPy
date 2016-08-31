@@ -50,11 +50,7 @@ h('xopen("interpxyz.hoc")')
 
 #POINTER im, ex2, ex
 
-#      setpointer ex_xtra(x), e_extracellular(x) : ex_xtra drives e_extracellular
-#setpointer im_xtra(x), i_membrane(x)
-#setpointer ex_xtra(x), e_extracellular(x) #: ex_xtra drives e_extracellular
 h('forall{ if (ismembrane("xtra")){ { setpointer im_xtra(x), i_membrane(x) } } }')    
-
 h('forall{ if (ismembrane("xtra")){ { ex_xtra(x), e_extracellular(x) } } }')    
 
 exec_hoc='''
@@ -70,8 +66,7 @@ proc fieldrec() { local sum
 }
 '''
 h(exec_hoc)
-#local_sum=
-h.fieldrec()
+local_sum=h.fieldrec()
 print local_sum
 h.xopen('simulation_run.hoc')
 
