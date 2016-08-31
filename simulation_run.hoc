@@ -1,0 +1,53 @@
+objref pc
+
+pc = new ParallelContext()
+
+id = int(pc.id())
+nhost = int(pc.nhost())
+print id, nhost
+//print 'I am %d of %d'%(id, nhost)
+//print 'I am %d of %d'%(nhost)
+
+if (0) { pc.runworker()  pc.done() quit() }
+
+//{finitialize(-65) cvode_local(1) cvode.atol(1e-4)} // the finitialze avoids /0 in BREAKPOINT
+
+prun()
+
+//if (pc.nhost >= 128) {balanalfile("balanal.dat")}
+
+endtime = startsw()
+
+if (pc.id == 0) { print "tstop = ", tstop }
+if (pc.id == 0) { 
+	if (runtime%2==0){
+		print "RunTime: ", runtime 
+	}
+}
+
+//{localloadfile("prcellstate.hoc")}
+proc pcs() {local spgid
+	spgid = thishost_gid($1)
+	if (spgid >= 0) prcellstate(load_balance_phase, spgid)
+	pc.runworker()  pc.done() quit()
+}
+//pcs(103)
+
+spike2file()
+
+if (pc.nhost > 5) {cvode_active(1)} // to count equations
+{pc.runworker()}
+
+print "Maximum integration interval: ", mindelay()
+getstat()
+prhist()
+print_spike_stat_info()
+
+{pc.done()}
+
+perf2file()
+endtime = startsw() - endtime
+print "endtime ", endtime
+
+if (!serial) { quit() }
+

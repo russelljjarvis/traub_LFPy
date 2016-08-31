@@ -7,20 +7,36 @@
 #
 # The example uses mpi4py with openmpi, and do not rely on NEURON's MPI.
 ################################################################################
-'''
 
+
+However, there is one important caveat: The NEURON extension module does not initialize MPI itself, but rather delegates this job to Python. To initialize MPI in Python, one must import a Python MPI module, such as “MPI for Python” (mpi4py) (Dalcín et al., 2008), prior to importing neuron:
+
+
+from mpi4py import MPI
+from neuron import h
+pc = h.ParallelContext()
+s = "mpi4py thinks I am %d of %d,\
+ NEURON thinks I am %d of %d\n"
+cw = MPI.COMM_WORLD
+print s % (cw.rank, cw.size, \
+           pc.id(),pc.nhost())
+pc.done()
+
+
+'''
+import pdb
 import os
-from os.path import join
+#from os.path import join
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.collections import PolyCollection
+#import matplotlib.pyplot as plt
+#from matplotlib.collections import PolyCollection
 import LFPy
-import sys
+#import sys
 #if sys.version < '3':
 #    from urllib2 import urlopen
 #else:    
 #    from urllib.request import urlopen
-import zipfile
+#import zipfile
 from mpi4py import MPI
 
 #MPI stuff we're using
@@ -48,7 +64,6 @@ from neuron import h
 # Call the initialisation of Traubs model, using HOC native NEURON code the contents of the
 # h object will reflect NEURON objects in the Python name space.
 
-h.xopen('init.hoc')
 
 # Try dir(h) to check out the hoc variables existing in the python name space.
 
@@ -73,8 +88,13 @@ electrode_parameters = {
 electrode = LFPy.RecExtElectrode(**electrode_parameters)
     
         
-    
+h.xopen('init.hoc')
+h.xopen('simulation_run.hoc')
+#dir(electrode)
+electrode.cal_lfp()
+#pdb.set_trace()    
         
+#electrode_dic = {'LFP' : electrode.LFP }#, 'somav' : cell.somav}
 
 
 '''
@@ -88,22 +108,21 @@ def distribute_cellsims(self):
 	return results
 '''
 
-def cellsim(cellindex):
-    '''main cell- and LFP simulation procedure'''
-    #create extracellular electrode object
-    electrode = LFPy.RecExtElectrode(**self.electrodeParameters)
-    #perform NEURON simulation, results saved as attributes in cell
-    cell.simulate(electrode = electrode)
+#def cellsim(cellindex):
+'''main cell- and LFP simulation procedure'''
+#create extracellular electrode object
+#electrode = LFPy.RecExtElectrode(electrodeParameters)
+#perform NEURON simulation, results saved as attributes in cell
+#cell.simulate(electrode = electrode)
     
-    #return dict with primary results from simulation
-    return {'LFP' : electrode.LFP, 'somav' : cell.somav}
+#return dict with primary results from simulation
 
     
 
 
-
+'''
 def run(self):
-    '''execute the proper simulation and collect simulation results'''
+    execute the proper simulation and collect simulation results
     #produce simulation results on each RANK
     self.results = self.distribute_cellsims()
     
@@ -124,4 +143,5 @@ def run(self):
         self.results = None                 #results only exist on RANK 0
         
     COMM.Barrier()  #sync MPI threads
-
+run()
+'''
