@@ -38,7 +38,6 @@ if RANK == 0:
     #sync threads
 COMM.Barrier()
 h.xopen('init.hoc')
-h.xopen('simulation_run.hoc')
 h.define_shape()
 cells=h.cells
 ncell=len(cells)
@@ -57,55 +56,50 @@ for i in xrange(0,SIZE*ncell):
 
 
 
-#itercell= ( (i,t) for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )       
+#itercell= ( (i,t) for i,t in  celldict.iteritems() if i in  celldict.keys() if int(t.gid1) != int(k['gid']) )       
 #suspect lambda rule needs to be called before x is a thing.
 hoc_string='''
 forall {
-   //for (x, 0) {
       insert xtra
-   //}
 }
 '''
 h(hoc_string)
-h('forall{ for(x,0){ insert xtra }}')
-h('forall{ for(x,0){ insert extracellular}}')    
+h('forall{ insert xtra }')
+h('forall{ insert extracellular }')    
 h('xopen("interpxyz.hoc")')
 h('grindaway()')  
-pdb.set_trace()
+#pdb.set_trace()
+'''
 print 'got here?'
 coordinates=[]
 for cell in celldict.values():
-    #seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls for seg in sec )     
+    #seglist= iter( (seg, sec,  celldict[j]) for sec in  celldict[j].spk_trig_ls for seg in sec )     
     #for (seg,sec, cellc) in seglist:	   
 	seglist= iter((seg, sec) for sec in cell.all for seg in sec)
 	for seg, sec in seglist:
 		sec.push()
-		h('print x_xtra()')#, y_xtra(), z_xtra()')
-		h('print psection()')
-		'''h('objref coords')
-		h('coords = new Vector()')
-		get_cox = str('coords.x[0]=x_xtra('
-		              + str(0.5) + ')')
-		h(get_cox)                   
-		get_coy = str('coords.x[1]=y_xtra('
-		              + str(0.5) + ')')
-		h(get_coy)
-		get_coz = str('coords.x[2]=z_xtra('
-		              + str(0.5) + ')')
-		h(get_coz)
+		#h('print x_xtra(0.5)')#, y_xtra(), z_xtra()')
+		#h('print psection()')
+		h('objref coords')
+		h('coords = new Vector(3)')
+		
+		h('get_cox = coords.x[0]=x_xtra(0.5)')
+		h('get_cox = coords.x[1]=y_xtra(0.5)')
+		h('get_cox = coords.x[2]=z_xtra(0.5)')
+		#h('print coords')
 		coordinates.append(h.coords.to_python())
-		'''
+		#h(exec_string)
 		h.pop_section()
+print coordinates
+'''
 
+#check_duplicate=set(coordinates)
+#assert len(check_duplicates)==len(coordinates)
 seglist= [ seg for cell in cells for seclist in cell.all for sec in seclist for seg in sec ]
 #for seg in seglist:
 #	print seg
 	#h.insert('xtra')
 
-h('forall{ insert xtra }')
-h('forall{ insert extracellular }')
-
-#h('forall{ { psection() } }')
 #seglist= iter( (seg, sec, cell) for sec in cell for seg in sec ) 
 seglist= iter( (seg, sec, cell) for cell in cells for sec in cell for seg in sec ) 
 
@@ -114,30 +108,26 @@ seglist= iter( (seg, sec, cell) for cell in cells for sec in cell for seg in sec
 #		print seg.x
 
 #h('forall{ for(0,x) { insert xtra  } }')
-print 'got here'
-h('grindaway()') 
+	
 
-h('xopen("interpxyz.hoc")')
 
 #POINTER im, ex2, ex
 
-h('forall{ if (ismembrane("xtra")){ for(x,0) { setpointer im_xtra(x), i_membrane(x) } } }')    
-h('forall{ if (ismembrane("xtra")){ for(x,0) { ex_xtra(x), e_extracellular(x) } } }')    
-
+h('forall{ if (ismembrane("xtra")){ setpointer im_xtra(0.5), i_membrane(0.5)  } }')    
+h('forall{ if (ismembrane("xtra")){ setpointer ex_xtra(0.5), e_extracellular(0.5)  } }')    
+h('forall { uninsert xtra }')
 exec_hoc='''
 //https://www.neuron.yale.edu/phpBB/viewtopic.php?f=31&t=3083
-proc fieldrec() { local sum
+func fieldrec() { local sum
   sum = 0
   forall {
-    for(x,0) {
-
 		if (ismembrane("xtra")) {
-		   sum += er_xtra(x)
+		   sum += er_xtra(0.5)
 		}
-	}
   }
-  //return sum
+  return sum
 }
+//This sums all of the extra cellular resistances.
 '''
 h(exec_hoc)
 local_sum=h.fieldrec()
@@ -145,18 +135,22 @@ print local_sum
 
 #############################################################
 ########    Simulation control    ##########################
-{pc.set_maxstep(10)}
-h.stdinit()
-{pc.psolve(h.tstop)}
+#h.xopen('simulation_run.hoc')
+
+#{pc.set_maxstep(10)}
+#h.stdinit()
+#{pc.psolve(h.tstop)}
 ###############################################################
         
-def prun(self,tstop):
-    h=self.h    
+def prun(tstop):
+    #MPI stuff we're using
+    COMM = MPI.COMM_WORLD#h.ParallelContext()#MPI.COMM_WORLD
+    SIZE = COMM.Get_size()#int(pc.nhost)#
+    RANK = COMM.Get_rank()#int(pc.id)#
+    local_sumf=[]
+
     pc=h.ParallelContext()
-    NCELL=self.NCELL
-    SIZE=self.SIZE
-    COMM = self.COMM
-    RANK=self.RANK
+    
     checkpoint_interval = 50000.
 
     #The following definition body is from the open source code at:
@@ -169,7 +163,7 @@ def prun(self,tstop):
     pc.setup_transfer()
     mindelay = pc.set_maxstep(10)
     if RANK == 0:
-        print 'mindelay = %g' % mindelay
+        print 'mindelay = %g' % mindelay, 'yes really in a loop'
     runtime = h.startsw()
     exchtime = pc.wait_time()
 
@@ -184,13 +178,17 @@ def prun(self,tstop):
         tnext = h.t + checkpoint_interval
         if tnext > tstop:
             tnext = tstop
+
+        local_sumf.append(float(h.fieldrec()))
+        print h.fieldrec(), 'this is the field value at time', h.t	
         pc.psolve(tnext)
         if h.t == told:
             if RANK == 0:
                 print 'psolve did not advance time from t=%.20g to tnext=%.20g\n' \
                     % (h.t, tnext)
             break    
-        print 'working', h.t
+        print 'working', h.t, h.fieldrec()
+		
     runtime = h.startsw() - runtime
     comptime = pc.step_time()
     splittime = pc.vtransfer_time(1)
@@ -199,12 +197,13 @@ def prun(self,tstop):
     if RANK == 0:
         print 'runtime = %g' % runtime
     print comptime, exchtime, splittime, gaptime
-
+    return local_sumf
 # Code above should be translated into the file below.
+local_sumf=prun(5.5)
+print local_sumf
+#h.xopen('simulation_run.hoc')
 
-h.xopen('simulation_run.hoc')
-
-global_sum=pc.allreduce(local_sum, 1)
+#global_sum=pc.allreduce(local_sumf, 1)
 print global_sum
 #LFPy.cell.neuron.load_mechanisms('cells')    
 

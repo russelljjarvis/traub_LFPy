@@ -43,6 +43,8 @@ gfac_GABAA = 1
 
 use_p2c_net_connections = 0 // not 0, requires p2c emitted  map and compmap files
 
+//  cell object instantiation done in file below
+
 {localloadfile("manage_setup.hoc")}
 
 steps_per_ms = 40
@@ -61,9 +63,9 @@ tstop = mytstop
 // If rank==0 tell the other workers to run a parallel simulation, then stop and quit.
 //comment out the rest of the code, to see whats available in the Python name space.
 
-
-
 /*
+
+
 if (0) { pc.runworker()  pc.done() quit() }
 
 //{finitialize(-65) cvode_local(1) cvode.atol(1e-4)} // the finitialze avoids /0 in BREAKPOINT
@@ -103,3 +105,4 @@ print "endtime ", endtime
 
 if (!serial) { quit() }
 */
+
